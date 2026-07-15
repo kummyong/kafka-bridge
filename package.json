@@ -1,0 +1,13 @@
+{
+  "name": "kafka-bridge",
+  "version": "1.0.0",
+  "description": "Consume from Kafka cluster A and produce to Kafka cluster B, configurable via a web UI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "kafkajs": "^2.2.4"
+  }
+}

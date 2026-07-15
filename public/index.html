@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Kafka Bridge</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", sans-serif; background: #f4f5f7; margin: 0; padding: 24px; color: #1a1a1a; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: #666; margin-bottom: 20px; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; }
+  .card h2 { font-size: 15px; margin: 0 0 12px; }
+  label { display: block; font-size: 12px; color: #555; margin: 10px 0 4px; }
+  input, select { width: 100%; padding: 6px 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .row label { margin: 0; }
+  .checkbox-row { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
+  .checkbox-row input { width: auto; }
+  .actions { margin-top: 20px; display: flex; gap: 10px; align-items: center; }
+  button { padding: 8px 16px; font-size: 13px; border: none; border-radius: 4px; cursor: pointer; }
+  #saveBtn { background: #2563eb; color: #fff; }
+  #startBtn { background: #16a34a; color: #fff; }
+  #stopBtn { background: #dc2626; color: #fff; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #statusBadge { font-size: 12px; padding: 4px 10px; border-radius: 12px; font-weight: 600; }
+  .st-stopped { background: #eee; color: #555; }
+  .st-running { background: #dcfce7; color: #166534; }
+  .st-starting, .st-stopping { background: #fef9c3; color: #854d0e; }
+  .st-error { background: #fee2e2; color: #991b1b; }
+  .stats { margin-top: 16px; font-size: 13px; color: #333; display: flex; gap: 20px; }
+  #logBox { margin-top: 20px; background: #0f172a; color: #d1d5db; font-family: monospace; font-size: 12px; padding: 12px; border-radius: 8px; height: 220px; overflow-y: auto; white-space: pre-wrap; }
+  #msgTable { width: 100%; border-collapse: collapse; margin-top: 8px; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; font-size: 12px; }
+  #msgTable th, #msgTable td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #eee; }
+  #msgTable th { background: #f4f5f7; font-weight: 600; color: #555; }
+  #msgTable td.key, #msgTable td.val { font-family: monospace; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #msgTable td.status-forwarded { color: #16a34a; }
+  #msgTable td.status-error { color: #dc2626; }
+  #msgTable td.status-consumed { color: #854d0e; }
+  .msg { margin-top: 10px; font-size: 13px; }
+  .msg.error { color: #dc2626; }
+  .msg.ok { color: #16a34a; }
+</style>
+</head>
+<body>
+  <h1>Kafka Bridge</h1>
+  <div class="sub">클러스터 A(source)에서 메시지를 수신하여 클러스터 B(target)로 전달합니다.</div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Source Cluster (A)</h2>
+      <label>Brokers (콤마로 구분, 예: host1:9092,host2:9092)</label>
+      <input id="src-brokers" placeholder="localhost:9092" />
+      <label>Topic</label>
+      <input id="src-topic" placeholder="source-topic" />
+      <label>Consumer Group ID</label>
+      <input id="src-group" placeholder="kafka-bridge-group" />
+      <div class="checkbox-row">
+        <input type="checkbox" id="src-from-beginning" />
+        <label style="margin:0">처음부터 읽기 (fromBeginning)</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="src-ssl" />
+        <label style="margin:0">SSL 사용</label>
+      </div>
+      <label>SASL Mechanism</label>
+      <select id="src-sasl-mechanism">
+        <option value="none">없음</option>
+        <option value="plain">PLAIN</option>
+        <option value="scram-sha-256">SCRAM-SHA-256</option>
+        <option value="scram-sha-512">SCRAM-SHA-512</option>
+      </select>
+      <label>Username</label>
+      <input id="src-sasl-username" />
+      <label>Password</label>
+      <input id="src-sasl-password" type="password" />
+    </div>
+
+    <div class="card">
+      <h2>Target Cluster (B)</h2>
+      <label>Brokers (콤마로 구분)</label>
+      <input id="tgt-brokers" placeholder="localhost:9093" />
+      <label>Topic</label>
+      <input id="tgt-topic" placeholder="target-topic" />
+      <div class="checkbox-row">
+        <input type="checkbox" id="tgt-ssl" />
+        <label style="margin:0">SSL 사용</label>
+      </div>
+      <label>SASL Mechanism</label>
+      <select id="tgt-sasl-mechanism">
+        <option value="none">없음</option>
+        <option value="plain">PLAIN</option>
+        <option value="scram-sha-256">SCRAM-SHA-256</option>
+        <option value="scram-sha-512">SCRAM-SHA-512</option>
+      </select>
+      <label>Username</label>
+      <input id="tgt-sasl-username" />
+      <label>Password</label>
+      <input id="tgt-sasl-password" type="password" />
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="saveBtn">설정 저장</button>
+    <button id="startBtn">시작</button>
+    <button id="stopBtn">중지</button>
+    <span id="statusBadge" class="st-stopped">stopped</span>
+  </div>
+  <div id="msg" class="msg"></div>
+
+  <div class="stats" id="stats"></div>
+
+  <h2 style="font-size:15px; margin-top:20px;">최근 메시지</h2>
+  <table id="msgTable">
+    <thead>
+      <tr><th>시각</th><th>상태</th><th>파티션/오프셋</th><th>Key</th><th>Value</th></tr>
+    </thead>
+    <tbody id="msgTableBody"></tbody>
+  </table>
+
+  <div id="logBox"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
