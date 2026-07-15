@@ -132,7 +132,7 @@ class KafkaBridge extends EventEmitter {
       this.status = 'error';
       this.lastError = err.message;
       this.log(`ERROR starting bridge: ${err.message}`);
-      await this.stop().catch(() => {});
+      await this.stop();
       throw err;
     }
   }

@@ -33,6 +33,15 @@ pm2 start server.js --name kafka-bridge
 pm2 save
 ```
 
+## 테스트
+
+실제 카프카 클러스터 없이 `kafkajs`를 목(mock) 처리해서 동작을 검증한다. `bridge.js`(브릿지 로직)와 `app.js`(Express API)를 대상으로 하며, 커버리지 임계값(문/브랜치/함수/라인 90% 이상)을 만족하지 못하면 `test:coverage`가 실패한다.
+
+```bash
+npm test              # 전체 테스트 실행
+npm run test:coverage # 커버리지 리포트 포함 (임계값 미달 시 실패)
+```
+
 ## 웹 화면에서 설정하기
 
 1. **Source Cluster (A)**: 브로커 주소(콤마로 구분), 토픽, 컨슈머 그룹 ID, 필요 시 SSL/SASL(PLAIN, SCRAM-SHA-256/512) 입력
